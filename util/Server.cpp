@@ -1,7 +1,3 @@
-//
-// Created by Shawn Wan on 2024/11/5.
-//
-// util/server.cpp
 #include "Server.h"
 
 Server::Server(int port) : port_(port), server_fd_(-1), addrlen_(sizeof(address_)) {
@@ -43,8 +39,7 @@ bool Server::initialize() {
         return false;
     }
 
-//    std::cout << "Server is listening on port " << port_ << std::endl;
-//    std::cout << port_  <<std::endl;
+    std::cout << "Server is listening on port " << port_ << std::endl;
     return true;
 }
 
@@ -54,18 +49,24 @@ int Server::acceptConnection() {
         perror("Accept failed");
         return -1;
     }
-    std::cout << "Accepted new connection on port" << port_ << std::endl;
+    std::cout << "Accepted new connection on port " << port_ << std::endl;
     return new_socket;
 }
 
 void Server::closeConnection(int client_socket) {
     close(client_socket);
-    std::cout << "Closed connection with client on port" << port_ << std::endl;
+    std::cout << "Closed connection with client on port " << port_ << std::endl;
 }
 
 void Server::closeServer() {
     if (server_fd_ != -1) {
         close(server_fd_);
+        server_fd_ = -1;
         std::cout << "Closed server on port " << port_ << std::endl;
     }
+}
+
+// Add getSocket method
+int Server::getSocket() const {
+    return server_fd_;
 }

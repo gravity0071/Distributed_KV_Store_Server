@@ -1,7 +1,7 @@
 // ClientThread.cpp
 // Created by Shawn Wan on 2024/11/14
 
-#include "ClientMainFunction.h"
+#include "clientMainFunction.h"
 #include <iostream>
 #include <thread>
 #include <vector>
@@ -80,37 +80,46 @@ void ClientThread::handleClient(int clientSocket) {
 void ClientThread::run() {
     Server server(port);
 
-    // Initialize the server
     if (!server.initialize()) {
         std::cerr << "ClientThread: Server initialization failed.\n";
         return;
     }
 
-    std::vector<std::thread> clientThreads;
-
+    fd_set readfds;
     while (isRunning) {
-        // Accept a new client connection
-        int clientSocket = server.acceptConnection();
-        if (clientSocket < 0) {
-            if (!isRunning) break; // Shutdown signal received
-            std::cerr << "ClientThread: Failed to accept client connection.\n";
+        FD_ZERO(&readfds);
+        FD_SET(server.getSocket(), &readfds);
+
+        struct timeval timeout{};
+        timeout.tv_sec = 1;  // 1-second timeout
+        timeout.tv_usec = 0;
+
+        int activity = select(server.getSocket() + 1, &readfds, nullptr, nullptr, &timeout);
+
+        if (activity < 0 && errno != EINTR) {
+            perror("Select error");
+            break;
+        }
+
+        if (activity == 0) {
+            // Timeout, check isRunning
             continue;
         }
 
-        std::cout << "Accepted new client connection.\n";
+        if (FD_ISSET(server.getSocket(), &readfds)) {
+            int clientSocket = server.acceptConnection();
+            if (clientSocket < 0) {
+                std::cerr << "Failed to accept client connection.\n";
+                continue;
+            }
 
-        // Spawn a new thread to handle the client
-        clientThreads.emplace_back(&ClientThread::handleClient, this, clientSocket);
-    }
+            std::cout << "Accepted new client connection.\n";
 
-    // Join all client threads
-    for (auto& t : clientThreads) {
-        if (t.joinable()) {
-            t.join();
+            // Handle client connection
+            std::thread(&ClientThread::handleClient, this, clientSocket).detach();
         }
     }
 
-    // Close the server when done
     server.closeServer();
     std::cout << "ClientThread: Server stopped.\n";
 }

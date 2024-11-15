@@ -5,8 +5,10 @@
 #include <unistd.h> // For close()
 
 // Constructor
-CommandThread::CommandThread(KVMap& kvMap, int port, bool& isMigrating, std::atomic<bool>& isRunning, JsonParser& jsonParser)
-        : kvMap(kvMap), port(port), isMigrating(isMigrating), isRunning(isRunning), jsonParser(jsonParser), commandSocket(-1) {}
+CommandThread::CommandThread(KVMap &kvMap, int port, bool &isMigrating, std::atomic<bool> &isRunning,
+                             JsonParser &jsonParser)
+        : kvMap(kvMap), port(port), isMigrating(isMigrating), isRunning(isRunning), jsonParser(jsonParser),
+          commandSocket(-1) {}
 
 // Destructor
 CommandThread::~CommandThread() {
@@ -50,16 +52,23 @@ void CommandThread::processCommands() {
             } else {
                 std::cerr << "CommandThread: Error reading from client.\n";
             }
+            close(commandSocket); // Clean up socket
             break;
         }
 
         buffer[bytesRead] = '\0'; // Null-terminate the received data
-        if(buffer == "close")
-            isRunning = false;
         std::cout << "CommandThread: Received command: " << buffer << "\n";
+
+        // Process command
+        if (std::string(buffer) == "close") {
+            std::cout << "CommandThread: Shutting down...\n";
+            isRunning = false; // Signal to stop the server
+            break;
+        }
 
         memset(buffer, 0, sizeof(buffer)); // Clear the buffer for the next command
     }
+    close(commandSocket); // Ensure the socket is closed on exit
 }
 
 // Run the thread

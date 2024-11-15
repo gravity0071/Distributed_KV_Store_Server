@@ -15,7 +15,6 @@
 class Server {
 public:
     Server(int port);
-
     ~Server();
 
     bool initialize();
@@ -26,12 +25,17 @@ public:
 
     void closeServer();
 
-private:
-    int port_;
-    int server_fd_;
-    struct sockaddr_in address_;
-    int addrlen_;
+    // Add this method to get the server's socket file descriptor
+    int getSocket() const;
 
+private:
+    int port_;                 // Port number the server listens on.
+    int server_fd_;            // Server socket file descriptor.
+    struct sockaddr_in address_; // Structure holding server address information.
+    int addrlen_;              // Length of the server address structure.
+
+    // Configures the server socket with necessary options.
+    // Returns true on success, false on failure.
     bool configureSocket();
 };
 
