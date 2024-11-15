@@ -2,6 +2,7 @@
 
 #include "../util/KVMap.h"
 #include "../util/JsonParser.h"
+#include "../util/TcpConnectionUtility.h"
 #include <atomic>
 #include <string>
 
@@ -14,6 +15,7 @@ private:
     int masterSocket;                  // Socket for the connection to the master
     std::string storeId;
     JsonParser& jsonParser;
+    TcpConnectionUtility& tcpConnectionUtility;
 
     // Function to establish a connection to the master
     bool connectToMaster();

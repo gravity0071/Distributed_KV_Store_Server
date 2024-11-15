@@ -13,21 +13,19 @@
 
 int main(int argc, char* argv[]) {
     // Check for correct number of arguments
-    if (argc != 5) {
-        std::cerr << "Usage: " << argv[0] << " <client_port> <heartbeat_port> <command_port> <store_id>\n";
+    if (argc != 4) {
+        std::cerr << "Usage: " << argv[0] << " <client_port> <command_port> <store_id>\n";
         return 1; // Exit with error code
     }
 
     // Parse command-line arguments
     int clientPort = std::stoi(argv[1]);
-    int heartbeatPort = std::stoi(argv[2]);
-    int commandPort = std::stoi(argv[3]);
-    std::string storeId = argv[4];
+    int commandPort = std::stoi(argv[2]);
+    std::string storeId = argv[3];
 
     // Output parsed ports
     std::cout << "Starting server with ports:\n"
               << "Client Port: " << clientPort << "\n"
-              << "Heartbeat Port: " << heartbeatPort << "\n"
               << "Command Port: " << commandPort << "\n"
               << "store Id: " << storeId << "\n";
 

@@ -8,7 +8,7 @@
 
 // Constructor
 HeartbeatThread::HeartbeatThread(KVMap& kvMap, const std::string& masterIp, int masterPort, std::atomic<bool>& isRunning, std::string& storeId, JsonParser& jsonParser)
-        : kvMap(kvMap), masterIp(masterIp), masterPort(masterPort), isRunning(isRunning), storeId(storeId), jsonParser(jsonParser), masterSocket(-1) {}
+        : kvMap(kvMap), masterIp(masterIp), masterPort(masterPort), isRunning(isRunning), storeId(storeId), jsonParser(jsonParser), masterSocket(-1), tcpConnectionUtility(tcpConnectionUtility) {}
 
 // Destructor
 HeartbeatThread::~HeartbeatThread() {
@@ -16,39 +16,6 @@ HeartbeatThread::~HeartbeatThread() {
         close(masterSocket); // Close the master socket if open
         std::cout << "HeartbeatThread: Connection to master closed.\n";
     }
-}
-
-// Function to establish a connection to the master
-bool HeartbeatThread::connectToMaster() {
-    if (masterSocket != -1) {
-        close(masterSocket); // Close existing socket, if any
-    }
-
-    // Create a new socket
-    masterSocket = socket(AF_INET, SOCK_STREAM, 0);
-    if (masterSocket < 0) {
-        perror("Socket creation failed");
-        return false;
-    }
-
-    sockaddr_in masterAddress{};
-    masterAddress.sin_family = AF_INET;
-    masterAddress.sin_port = htons(masterPort);
-
-    // Convert master IP to binary form
-    if (inet_pton(AF_INET, masterIp.c_str(), &masterAddress.sin_addr) <= 0) {
-        perror("Invalid master IP address");
-        return false;
-    }
-
-    // Connect to the master
-    if (connect(masterSocket, (struct sockaddr*)&masterAddress, sizeof(masterAddress)) < 0) {
-        perror("Connection to master failed");
-        return false;
-    }
-
-    std::cout << "Connected to master at " << masterIp << ":" << masterPort << std::endl;
-    return true;
 }
 
 // Function to send heartbeat messages to the master
@@ -68,6 +35,18 @@ void HeartbeatThread::sendHeartbeat() {
     } else {
         std::cout << "Heartbeat sent to master.\n";
     }
+}
+
+// Function to establish a connection to the master
+bool HeartbeatThread::connectToMaster() {
+    masterSocket = tcpConnectionUtility.connectToServer(masterIp, masterPort);
+    if (masterSocket == -1) {
+        std::cerr << "Failed to connect to master at " << masterIp << ":" << masterPort << std::endl;
+        return false;
+    }
+
+    std::cout << "Successfully connected to master." << std::endl;
+    return true;
 }
 
 // Run the thread

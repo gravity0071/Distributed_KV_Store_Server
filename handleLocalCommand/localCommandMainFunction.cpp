@@ -54,6 +54,8 @@ void CommandThread::processCommands() {
         }
 
         buffer[bytesRead] = '\0'; // Null-terminate the received data
+        if(buffer == "close")
+            isRunning = false;
         std::cout << "CommandThread: Received command: " << buffer << "\n";
 
         memset(buffer, 0, sizeof(buffer)); // Clear the buffer for the next command
