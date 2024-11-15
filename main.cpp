@@ -1,86 +1,57 @@
-//
-// Created by Shawn Wan on 2024/11/5.
-//
-#include <iostream>
-#include <thread>
-#include "util/ConcurrentMap.h"
+#include "handleClient/clientMainFunction.h"
+#include "handleHeartbeat/heartbeatMainFunction.h"
+#include "handleLocalCommand/localCommandMainFunction.h"
+#include "util/KVMap.h"
 #include "util/JsonParser.h"
-#include "util/Server.h"
+#include <thread>
+#include <iostream>
+#include <atomic>
+#include <string>
 
-using namespace std;
+#define masterIp "127.0.0.1"
+#define heartbeatMasterPort 8081
 
-//// Function to insert key-value pairs in the map
-//void putValues(ConcurrentMap<int, string>& cmap) {
-//    for (int i = 0; i < 10; ++i) {
-//        cmap.put(i, "Value" + to_string(i));
-//        cout << "Inserted key " << i << " with value: " << "Value" + to_string(i) << endl;
-//    }
-//}
-//
-//// Function to get values from the map
-//void getValues(ConcurrentMap<int, string>& cmap) {
-//    for (int i = 0; i < 10; ++i) {
-//        string value;
-//        if (cmap.get(i, value)) {
-//            cout << "Retrieved key " << i << " with value: " << value << endl;
-//        } else {
-//            cout << "Key " << i << " not found" << endl;
-//        }
-//    }
-//}
-//
-//// Function to browse all key-value pairs
-//void browseMap(const ConcurrentMap<int, string>& cmap) {
-//    cout << "Browsing all key-value pairs:" << endl;
-//    cmap.browse();
-//}
-//
-//int main() {
-//    // Create a ConcurrentMap of <int, string>
-//    ConcurrentMap<int, string> cmap;
-//
-//    // Create threads to test concurrent put, get, and browse operations
-//    thread t1(putValues, ref(cmap));        // Thread to insert values
-//    thread t2(getValues, ref(cmap));        // Thread to get values
-//    thread t3(browseMap, cref(cmap));       // Thread to browse values
-//
-//    // Wait for all threads to complete
-//    t1.join();
-//    t2.join();
-//    t3.join();
-//
-//    cout << "\nFinal browsing of all key-value pairs:" << endl;
-//    cmap.browse();
-//
-//    return 0;
-//}
+int main(int argc, char* argv[]) {
+    // Check for correct number of arguments
+    if (argc != 5) {
+        std::cerr << "Usage: " << argv[0] << " <client_port> <heartbeat_port> <command_port> <store_id>\n";
+        return 1; // Exit with error code
+    }
 
-int main() {
-    Server server; // Initialize server on default port 8080
-    server.start(); // Start the server to listen for clients
+    // Parse command-line arguments
+    int clientPort = std::stoi(argv[1]);
+    int heartbeatPort = std::stoi(argv[2]);
+    int commandPort = std::stoi(argv[3]);
+    std::string storeId = argv[4];
 
+    // Output parsed ports
+    std::cout << "Starting server with ports:\n"
+              << "Client Port: " << clientPort << "\n"
+              << "Heartbeat Port: " << heartbeatPort << "\n"
+              << "Command Port: " << commandPort << "\n"
+              << "store Id: " << storeId << "\n";
+
+    // Initialize components
+    KVMap kvmap;
+    JsonParser jsonParser;
+    bool isMigrating = false; //if is migrating, block all the write function
+    std::atomic<bool> isRunning(true); // Shared shutdown flag
+
+    // Create thread objects with respective components and ports
+    ClientThread clientThread(kvmap, clientPort, isMigrating, isRunning, jsonParser);
+    HeartbeatThread heartbeatThread(kvmap, masterIp, heartbeatMasterPort, isRunning, storeId, jsonParser);
+    CommandThread commandThread(kvmap, commandPort, isMigrating, isRunning, jsonParser);
+
+    // Launch threads
+    std::thread client(&ClientThread::run, &clientThread);
+    std::thread heartbeat(&HeartbeatThread::run, &heartbeatThread);
+    std::thread command(&CommandThread::run, &commandThread);
+
+    // Wait for threads to complete
+    client.join();
+    heartbeat.join();
+    command.join();
+
+    std::cout << "Server shutting down...\n";
     return 0;
 }
-
-//int main() {
-//    JsonParser parser;
-//
-//    // Convert map to JSON string
-//    std::map<std::string, std::string> sampleMap = {
-//            {"name", "Alice"},
-//            {"age", "25"},
-//            {"city", "Los Angeles"}
-//    };
-//
-//    std::string jsonStr = parser.MapToJson(sampleMap);
-//    std::cout << "Map to JSON: " << jsonStr << std::endl;
-//
-//    // Convert JSON string back to map
-//    std::map<std::string, std::string> resultMap = parser.JsonToMap(jsonStr);
-//    std::cout << "JSON to Map:" << std::endl;
-//    for (const auto &[key, value] : resultMap) {
-//        std::cout << key << ": " << value << std::endl;
-//    }
-//
-//    return 0;
-//}
