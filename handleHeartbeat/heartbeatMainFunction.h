@@ -25,7 +25,9 @@ private:
 
 public:
     // Constructor
-    HeartbeatThread(KVMap& kvMap, const std::string& masterIp, int masterPort, std::atomic<bool>& isRunning, std::string& storeId, JsonParser& jsonParser);
+    HeartbeatThread(KVMap& kvMap, const std::string& masterIp, int masterPort,
+                    std::atomic<bool>& isRunning, std::string& storeId,
+                    JsonParser& jsonParser);
 
     // Destructor to clean up resources
     ~HeartbeatThread();

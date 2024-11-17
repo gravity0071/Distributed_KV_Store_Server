@@ -8,12 +8,9 @@
 #include <atomic>
 #include <string>
 
-#define masterIp "127.0.0.1"
-#define heartbeatMasterPort 8081
-
 int main(int argc, char* argv[]) {
     // Check for correct number of arguments
-    if (argc != 4) {
+    if (argc != 6) {
         std::cerr << "Usage: " << argv[0] << " <client_port> <command_port> <store_id>\n";
         return 1; // Exit with error code
     }
@@ -22,6 +19,8 @@ int main(int argc, char* argv[]) {
     int clientPort = std::stoi(argv[1]);
     int commandPort = std::stoi(argv[2]);
     std::string storeId = argv[3];
+    std::string masterIp = argv[4];
+    int masterHeartBeatPort = std::stoi(argv[5]);
 
     // Output parsed ports
     std::cout << "Starting server with ports:\n"
@@ -37,7 +36,7 @@ int main(int argc, char* argv[]) {
 
     // Create thread objects with respective components and ports
     ClientThread clientThread(kvmap, clientPort, isMigrating, isRunning, jsonParser);
-    HeartbeatThread heartbeatThread(kvmap, masterIp, heartbeatMasterPort, isRunning, storeId, jsonParser);
+    HeartbeatThread heartbeatThread(kvmap, masterIp, masterHeartBeatPort, isRunning, storeId, jsonParser);
     CommandThread commandThread(kvmap, commandPort, isMigrating, isRunning, jsonParser);
 
     // Launch threads
