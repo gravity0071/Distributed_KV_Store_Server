@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
     // Create thread objects with respective components and ports
     ClientThread clientThread(kvmap, clientPort, isMigrating, isRunning, jsonParser);
     HeartbeatThread heartbeatThread(kvmap, masterIp, masterHeartBeatPort, isRunning, storeId, jsonParser);
-    CommandThread commandThread(kvmap, commandPort, isMigrating, isRunning, jsonParser);
+    CommandThread commandThread(kvmap, commandPort, isMigrating, isRunning, storeId, jsonParser);
 
     // Launch threads
     std::thread client(&ClientThread::run, &clientThread);

@@ -9,24 +9,24 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <arpa/inet.h>
 
 // The Server class provides a basic TCP server implementation
 // that can initialize, accept connections, and manage client connections.
 class Server {
 public:
-    Server(int port);
+    explicit Server(int port);
+    Server();
+
     ~Server();
 
     bool initialize();
-
     int acceptConnection();
-
     void closeConnection(int client_socket);
-
     void closeServer();
-
-    // Add this method to get the server's socket file descriptor
     int getSocket() const;
+    std::string getServerIP() const;
+    int getServerPort() const;
 
 private:
     int port_;                 // Port number the server listens on.
