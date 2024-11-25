@@ -1,0 +1,16 @@
+# ninja log v5
+2	579	1731788470289853824	CMakeFiles/MyExecutable.dir/util/Server.cpp.o	8f04d0f9a35ab940
+2	600	1731788470311265472	CMakeFiles/MyExecutable.dir/util/TcpConnectionUtility.cpp.o	176a449db0b2ed0b
+1	694	1731788470405024671	CMakeFiles/MyExecutable.dir/util/KVMap.cpp.o	ce043243b7745eb3
+3	1283	1731788470993519420	CMakeFiles/MyExecutable.dir/handleLocalCommand/localCommandMainFunction.cpp.o	8d5a5a8a24f359bb
+3	1339	1731788471048643856	CMakeFiles/MyExecutable.dir/handleHeartbeat/heartbeatMainFunction.cpp.o	a86a56de68b4f637
+0	1361	1731788471071035023	CMakeFiles/MyExecutable.dir/main.cpp.o	5e96aad9a2b4363f
+2	1372	1731788471081447551	CMakeFiles/MyExecutable.dir/handleClient/clientMainFunction.cpp.o	34295a030b7267f1
+1	1783	1731788471492400394	CMakeFiles/MyExecutable.dir/util/JsonParser.cpp.o	4e77e135abd9595c
+1783	1867	1731788471581230762	MyExecutable	ae6be472f3f722e
+3	3965	1731888615100975723	CMakeFiles/MyExecutable.dir/main.cpp.o	5e96aad9a2b4363f
+5	3966	1731888615102938405	CMakeFiles/MyExecutable.dir/handleHeartbeat/heartbeatMainFunction.cpp.o	a86a56de68b4f637
+3966	4275	1731888615418930368	MyExecutable	ae6be472f3f722e
+3	3947	1732420302135284635	CMakeFiles/MyExecutable.dir/main.cpp.o	5e96aad9a2b4363f
+5	3949	1732420302137672605	CMakeFiles/MyExecutable.dir/handleHeartbeat/heartbeatMainFunction.cpp.o	a86a56de68b4f637
+3949	4255	1732420302450631044	MyExecutable	ae6be472f3f722e

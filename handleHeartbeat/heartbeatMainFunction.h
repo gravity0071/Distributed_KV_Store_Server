@@ -34,4 +34,7 @@ public:
 
     // Run the thread
     void run();
+
+    // Stops the heartbeat thread
+    void stopHeartbeat();
 };
