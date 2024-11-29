@@ -2,20 +2,21 @@
 
 #include "../util/KVMap.h"
 #include "../util/JsonParser.h"
+#include "../util/Server.h"
 #include <atomic>
 #include <string>
 
 class CommandThread {
-private:              // Reference to the key-value store
-    KVMap& kvMap;
+private:
+    KVMap& kvMap;                      // Reference to the key-value store
     int port;                          // Command port
-    bool& isMigrating;
+    bool& isMigrating;                 // Flag for migration state
     std::atomic<bool>& isRunning;      // Shared flag for graceful shutdown
-    int commandSocket;                 // Persistent socket for client connection
-    JsonParser& jsonParser;
+    JsonParser& jsonParser;            // JSON parser
+    int commandSocket;                 // Active client socket
 
     // Establish a connection with the command client
-    bool connectToClient();
+    bool connectToClient(Server &server);
 
     // Process commands received from the client
     void processCommands();

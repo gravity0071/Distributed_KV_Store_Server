@@ -6,8 +6,23 @@
 #include <iostream>
 #include <atomic>
 #include <string>
+#include <csignal>
+
+// Global running flag
+std::atomic<bool> isRunning(true);
+
+// Signal handler for graceful shutdown
+void handleSignal(int signal) {
+    if (signal == SIGINT) {
+        std::cout << "\nReceived SIGINT. Shutting down...\n";
+        isRunning = false;
+    }
+}
 
 int main(int argc, char* argv[]) {
+    // Attach signal handler
+    std::signal(SIGINT, handleSignal);
+
     if (argc != 4) {
         std::cerr << "Usage: " << argv[0] << " <client_port> <command_port> <store_id>\n";
         return 1;
@@ -27,19 +42,23 @@ int main(int argc, char* argv[]) {
     KVMap kvmap;
     JsonParser jsonParser;
     bool isMigrating = false;
-    std::atomic<bool> isRunning(true);
 
-    // Create thread objects
-    ClientThread clientThread(kvmap, clientPort, isMigrating, isRunning, jsonParser);
-    CommandThread commandThread(kvmap, commandPort, isMigrating, isRunning, jsonParser);
+    try {
+        // Create thread objects
+        ClientThread clientThread(kvmap, clientPort, isMigrating, isRunning, jsonParser);
+        CommandThread commandThread(kvmap, commandPort, isMigrating, isRunning, jsonParser);
 
-    // Launch threads
-    std::thread client(&ClientThread::run, &clientThread);
-    std::thread command(&CommandThread::run, &commandThread);
+        // Launch threads
+        std::thread client(&ClientThread::run, &clientThread);
+        std::thread command(&CommandThread::run, &commandThread);
 
-    // Wait for threads to complete
-    client.join();
-    command.join();
+        // Wait for threads to complete
+        client.join();
+        command.join();
+    } catch (const std::exception& e) {
+        std::cerr << "Error occurred: " << e.what() << "\n";
+        isRunning = false;
+    }
 
     std::cout << "Server shutting down...\n";
     return 0;

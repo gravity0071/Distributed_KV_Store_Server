@@ -9,7 +9,12 @@
 
 // Constructor
 ClientThread::ClientThread(KVMap& kvMap, int port, bool& isMigrating, std::atomic<bool>& isRunning, JsonParser& jsonParser)
-        : kvMap(kvMap), port(port), isMigrating(isMigrating), isRunning(isRunning), jsonParser(jsonParser) {}
+        : kvMap(kvMap), port(port), isMigrating(isMigrating), isRunning(isRunning), jsonParser(jsonParser) {
+    kvMap.put("1000", "A");
+    kvMap.put("2000", "B");
+    kvMap.put("3000", "C");
+}
+
 
 // 处理单个客户端请求
 void ClientThread::handleClient(int clientSocket) {
@@ -97,3 +102,4 @@ void ClientThread::run() {
     server.closeServer();
     std::cout << "ClientThread: Server stopped.\n";
 }
+

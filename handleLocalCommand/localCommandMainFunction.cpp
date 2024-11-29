@@ -19,16 +19,8 @@ CommandThread::~CommandThread() {
 }
 
 // Establish a connection with the command client
-bool CommandThread::connectToClient() {
-    Server server(port);
-
-    // Initialize the server
-    if (!server.initialize()) {
-        std::cerr << "CommandThread: Server initialization failed.\n";
-        return false;
-    }
-
-    // Accept a single client connection
+bool CommandThread::connectToClient(Server &server) {
+    // Accept a client connection
     commandSocket = server.acceptConnection();
     if (commandSocket < 0) {
         std::cerr << "CommandThread: Failed to accept client connection.\n";
@@ -53,32 +45,80 @@ void CommandThread::processCommands() {
                 std::cerr << "CommandThread: Error reading from client.\n";
             }
             close(commandSocket); // Clean up socket
-            break;
+            commandSocket = -1;  // Reset the socket
+            break; // Exit this client's loop
         }
 
         buffer[bytesRead] = '\0'; // Null-terminate the received data
         std::cout << "CommandThread: Received command: " << buffer << "\n";
 
-        // Process command
-        if (std::string(buffer) == "close") {
+        // Parse the command
+        auto command = jsonParser.JsonToMap(buffer);
+
+        // Validate command structure
+        if (command.find("operation") == command.end() || command.find("key") == command.end()) {
+            std::string errorResponse = jsonParser.MapToJson({{"error", "Invalid command format. Missing 'operation' or 'key'."}});
+            send(commandSocket, errorResponse.c_str(), errorResponse.size(), 0);
+            continue; // Wait for the next command
+        }
+
+        std::string operation = command["operation"];
+        std::string key = command["key"];
+
+        if (operation == "read") {
+            // Handle read operation
+            std::string value;
+            if (kvMap.get(key, value)) {
+                std::string successResponse = jsonParser.MapToJson({{"key", key}, {"value", value}});
+                send(commandSocket, successResponse.c_str(), successResponse.size(), 0);
+            } else {
+                std::string errorResponse = jsonParser.MapToJson({{"error", "Key not found."}});
+                send(commandSocket, errorResponse.c_str(), errorResponse.size(), 0);
+            }
+        } else if (operation == "write") {
+            // Handle write operation
+            if (command.find("value") != command.end()) {
+                std::string value = command["value"];
+                kvMap.put(key, value);
+                std::string successResponse = jsonParser.MapToJson({{"message", "Write operation succeeded."}});
+                send(commandSocket, successResponse.c_str(), successResponse.size(), 0);
+            } else {
+                std::string errorResponse = jsonParser.MapToJson({{"error", "Write operation failed. Missing 'value'."}});
+                send(commandSocket, errorResponse.c_str(), errorResponse.size(), 0);
+            }
+        } else if (operation == "close") {
+            // Handle close operation
             std::cout << "CommandThread: Shutting down...\n";
             isRunning = false; // Signal to stop the server
             break;
+        } else {
+            // Invalid operation
+            std::string errorResponse = jsonParser.MapToJson({{"error", "Invalid operation. Supported: 'read', 'write', 'close'."}});
+            send(commandSocket, errorResponse.c_str(), errorResponse.size(), 0);
         }
 
         memset(buffer, 0, sizeof(buffer)); // Clear the buffer for the next command
     }
-    close(commandSocket); // Ensure the socket is closed on exit
 }
 
 // Run the thread
 void CommandThread::run() {
-    if (!connectToClient()) {
-        std::cerr << "CommandThread: Failed to establish connection. Exiting thread.\n";
+    Server server(port);
+
+    if (!server.initialize()) {
+        std::cerr << "CommandThread: Server initialization failed.\n";
         return;
     }
 
-    processCommands();
+    while (isRunning) {
+        if (commandSocket == -1) { // Accept a new connection if no active connection
+            if (!connectToClient(server)) {
+                continue; // Retry accepting connections
+            }
+        }
+
+        processCommands(); // Process commands for the connected client
+    }
 
     // Clean up the socket
     if (commandSocket != -1) {
@@ -86,5 +126,6 @@ void CommandThread::run() {
         commandSocket = -1;
     }
 
+    server.closeServer();
     std::cout << "CommandThread: Stopped.\n";
 }
