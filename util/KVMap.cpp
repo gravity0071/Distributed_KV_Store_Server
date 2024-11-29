@@ -22,6 +22,39 @@ bool KVMap::get(const std::string& key, std::string& value) const {
     return false;
 }
 
+// 删除键值对
+bool KVMap::remove(const std::string& key) {
+    std::unique_lock<std::shared_mutex> lock(mutex); // 独占锁用于写入
+    auto it = map.find(key);
+    if (it != map.end()) {
+        map.erase(it);
+        std::cout << "KVMap: Removed key=" << key << std::endl;
+        return true;
+    }
+    std::cout << "KVMap: Key=" << key << " not found. Remove operation failed.\n";
+    return false;
+}
+
+// 增加键对应的值（假设值为整数）
+bool KVMap::increment(const std::string& key) {
+    std::unique_lock<std::shared_mutex> lock(mutex); // 独占锁用于写入
+    auto it = map.find(key);
+    if (it != map.end()) {
+        try {
+            int currentValue = std::stoi(it->second);
+            ++currentValue;
+            it->second = std::to_string(currentValue);
+            std::cout << "KVMap: Incremented key=" << key << ", new value=" << currentValue << std::endl;
+            return true;
+        } catch (const std::exception& e) {
+            std::cout << "KVMap: Increment failed for key=" << key << ". Value is not an integer.\n";
+            return false;
+        }
+    }
+    std::cout << "KVMap: Key=" << key << " not found. Increment operation failed.\n";
+    return false;
+}
+
 // 遍历所有键值对
 std::string KVMap::browse() const {
     std::shared_lock<std::shared_mutex> lock(mutex); // 共享锁用于读取

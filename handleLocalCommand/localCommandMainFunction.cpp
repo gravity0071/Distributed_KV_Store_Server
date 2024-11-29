@@ -86,6 +86,26 @@ void CommandThread::processCommands() {
                 std::string errorResponse = jsonParser.MapToJson({{"error", "Write operation failed. Missing 'value'."}});
                 send(commandSocket, errorResponse.c_str(), errorResponse.size(), 0);
             }
+        } else if (operation == "delete") {
+            // Handle delete operation
+            if (kvMap.remove(key)) {
+                std::string successResponse = jsonParser.MapToJson({{"message", "Delete operation succeeded."}});
+                send(commandSocket, successResponse.c_str(), successResponse.size(), 0);
+            } else {
+                std::string errorResponse = jsonParser.MapToJson({{"error", "Key not found. Delete operation failed."}});
+                send(commandSocket, errorResponse.c_str(), errorResponse.size(), 0);
+            }
+        } else if (operation == "increment") {
+            // Handle increment operation
+            if (kvMap.increment(key)) {
+                std::string newValue;
+                kvMap.get(key, newValue);
+                std::string successResponse = jsonParser.MapToJson({{"key", key}, {"value", newValue}});
+                send(commandSocket, successResponse.c_str(), successResponse.size(), 0);
+            } else {
+                std::string errorResponse = jsonParser.MapToJson({{"error", "Increment operation failed. Key not found or value is not an integer."}});
+                send(commandSocket, errorResponse.c_str(), errorResponse.size(), 0);
+            }
         } else if (operation == "close") {
             // Handle close operation
             std::cout << "CommandThread: Shutting down...\n";
@@ -93,7 +113,7 @@ void CommandThread::processCommands() {
             break;
         } else {
             // Invalid operation
-            std::string errorResponse = jsonParser.MapToJson({{"error", "Invalid operation. Supported: 'read', 'write', 'close'."}});
+            std::string errorResponse = jsonParser.MapToJson({{"error", "Invalid operation. Supported: 'read', 'write', 'delete', 'increment', 'close'."}});
             send(commandSocket, errorResponse.c_str(), errorResponse.size(), 0);
         }
 
