@@ -56,8 +56,6 @@ bool Server::initialize() {
         perror("Listen failed");
         return false;
     }
-
-    std::cout << "Server is listening on port " << port_ << std::endl;
     return true;
 }
 
@@ -72,20 +70,20 @@ int Server::acceptConnection() {
     char clientIP[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &clientAddress.sin_addr, clientIP, sizeof(clientIP));
     int clientPort = ntohs(clientAddress.sin_port);
-    std::cout << "Accepted connection from " << clientIP << ":" << clientPort << std::endl;
+//    std::cout << "Accepted connection from " << clientIP << ":" << clientPort << std::endl;
     return new_socket;
 }
 
 void Server::closeConnection(int client_socket) {
     close(client_socket);
-    std::cout << "Closed connection with client on port " << port_ << std::endl;
+//    std::cout << "Closed connection with client on port " << port_ << std::endl;
 }
 
 void Server::closeServer() {
     if (server_fd_ != -1) {
         close(server_fd_);
         server_fd_ = -1;
-        std::cout << "Closed server on port " << port_ << std::endl;
+//        std::cout << "Closed server on port " << port_ << std::endl;
     }
 }
 

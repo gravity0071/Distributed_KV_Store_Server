@@ -33,3 +33,18 @@ std::string KVMap::browse() const {
 
     return oss.str();
 }
+
+bool KVMap::deleteKey(const std::string& key) {
+    std::unique_lock<std::shared_mutex> lock(mutex);
+    return map.erase(key) > 0;
+}
+
+bool KVMap::contains(const std::string &key) const {
+    std::shared_lock lock(mutex);
+    return map.find(key) != map.end();
+}
+
+void KVMap::clear() {
+    std::unique_lock lock(mutex);
+    map.clear();
+}
