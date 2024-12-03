@@ -32,71 +32,48 @@ bool ClientThread::connectToClient(Server &server) {
     return true;
 }
 
-void ClientThread::processCommands() {
-    char buffer[1024] = {0};
+void ClientThread::processCommand(const std::string &commandJson, int clientSocket) {
+    auto command = jsonParser.JsonToMap(commandJson);
 
-    while (isRunning) {
-        int bytesRead = recv(commandSocket, buffer, sizeof(buffer) - 1, 0);
-        if (bytesRead <= 0) {
-            if (bytesRead == 0) {
-                std::cout << "ClientThread: Command client disconnected.\n";
-            } else {
-                std::cerr << "ClientThread: Error reading from command client.\n";
-            }
-            close(commandSocket);
-            commandSocket = -1;
-            break;
-        }
+    if (command.find("operation") == command.end() || command.find("key") == command.end()) {
+        std::string errorResponse = jsonParser.MapToJson({{"error", "Invalid command format. Missing 'operation' or 'key'."}});
+        send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
+        return;
+    }
 
-        buffer[bytesRead] = '\0';
+    std::string operation = command["operation"];
+    std::string key = command["key"];
 
-        auto command = jsonParser.JsonToMap(buffer);
-
-        if (command.find("operation") == command.end() || command.find("key") == command.end()) {
-            std::string errorResponse = jsonParser.MapToJson({{"error", "Invalid command format. Missing 'operation' or 'key'."}});
-            send(commandSocket, errorResponse.c_str(), errorResponse.size(), 0);
-            continue;
-        }
-
-        std::string operation = command["operation"];
-        std::string key = command["key"];
-
-        if (operation == "read") {
-            std::string value;
-            if (kvMap.get(key, value)) {
-                std::string successResponse = jsonParser.MapToJson({{"key", key}, {"value", value}});
-                send(commandSocket, successResponse.c_str(), successResponse.size(), 0);
-            } else {
-                std::string errorResponse = jsonParser.MapToJson({{"error", "Key not found."}});
-                send(commandSocket, errorResponse.c_str(), errorResponse.size(), 0);
-            }
-        } else if (operation == "write") {
-            if (command.find("value") != command.end()) {
-                std::string value = command["value"];
-                kvMap.write(key, value);
-                std::string successResponse = jsonParser.MapToJson({{"message", "Write operation succeeded."}});
-                send(commandSocket, successResponse.c_str(), successResponse.size(), 0);
-            } else {
-                std::string errorResponse = jsonParser.MapToJson({{"error", "Write operation failed. Missing 'value'."}});
-                send(commandSocket, errorResponse.c_str(), errorResponse.size(), 0);
-            }
-        } else if (operation == "delete") {
-            if (kvMap.remove(key)) {
-                std::string successResponse = jsonParser.MapToJson({{"message", "Delete operation succeeded."}});
-                send(commandSocket, successResponse.c_str(), successResponse.size(), 0);
-            } else {
-                std::string errorResponse = jsonParser.MapToJson({{"error", "Key not found. Delete operation failed."}});
-                send(commandSocket, errorResponse.c_str(), errorResponse.size(), 0);
-            }
-        } else if (operation == "close") {
-            std::cout << "ClientThread: Shutting down...\n";
-            isRunning = false;
-            break;
+    if (operation == "read") {
+        std::string value;
+        if (kvMap.get(key, value)) {
+            std::string successResponse = jsonParser.MapToJson({{"key", key}, {"value", value}});
+            send(clientSocket, successResponse.c_str(), successResponse.size(), 0);
         } else {
-            std::string errorResponse = jsonParser.MapToJson({{"error", "Invalid operation. Supported: 'read', 'write', 'delete', 'close'."}});
-            send(commandSocket, errorResponse.c_str(), errorResponse.size(), 0);
+            std::string errorResponse = jsonParser.MapToJson({{"error", "Key not found."}});
+            send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
         }
-        memset(buffer, 0, sizeof(buffer));
+    } else if (operation == "write") {
+        if (command.find("value") != command.end()) {
+            std::string value = command["value"];
+            kvMap.write(key, value);
+            std::string successResponse = jsonParser.MapToJson({{"message", "Write operation succeeded."}});
+            send(clientSocket, successResponse.c_str(), successResponse.size(), 0);
+        } else {
+            std::string errorResponse = jsonParser.MapToJson({{"error", "Write operation failed. Missing 'value'."}});
+            send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
+        }
+    } else if (operation == "delete") {
+        if (kvMap.remove(key)) {
+            std::string successResponse = jsonParser.MapToJson({{"message", "Delete operation succeeded."}});
+            send(clientSocket, successResponse.c_str(), successResponse.size(), 0);
+        } else {
+            std::string errorResponse = jsonParser.MapToJson({{"error", "Key not found. Delete operation failed."}});
+            send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
+        }
+    } else {
+        std::string errorResponse = jsonParser.MapToJson({{"error", "Invalid operation. Supported: 'read', 'write', 'delete'."}});
+        send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
     }
 }
 
@@ -108,13 +85,27 @@ void ClientThread::run() {
         return;
     }
 
+    std::vector<std::thread> client_threads;
+
     while (isRunning) {
-        if (commandSocket == -1) {
-            if (!connectToClient(server)) {
-                continue;
-            }
+        int clientSocket = server.acceptConnection();
+
+        if (clientSocket < 0) {
+            std::cerr << "ClientThread: Failed to accept client connection.\n";
+            continue;
         }
-        processCommands();
+
+        // Spawn a new thread to handle the client
+        client_threads.emplace_back([this, clientSocket]() {
+            this->processClient(clientSocket);
+        });
+    }
+
+    // Join all client threads before shutting down
+    for (auto &t : client_threads) {
+        if (t.joinable()) {
+            t.join();
+        }
     }
 
     if (commandSocket != -1) {
@@ -123,4 +114,30 @@ void ClientThread::run() {
 
     server.closeServer();
     std::cout << "ClientThread: Stopped.\n";
+}
+
+void ClientThread::processClient(int clientSocket) {
+    char buffer[1024]; // Buffer to hold received data
+
+    while (true) {
+        memset(buffer, 0, sizeof(buffer)); // Clear the buffer for each new message
+
+        int bytes_read = recv(clientSocket, buffer, sizeof(buffer) - 1, 0); // Leave space for null termination
+
+        if (bytes_read < 0) {
+            perror("Error reading from socket");
+            break;
+        } else if (bytes_read == 0) {
+            std::cout << "Client disconnected.\n";
+            break;
+        }
+
+        buffer[bytes_read] = '\0'; // Null-terminate the buffer to safely print as a string
+
+        // Process the command
+        processCommand(buffer, clientSocket);
+    }
+
+    close(clientSocket);
+    std::cout << "Stopped handling client.\n";
 }

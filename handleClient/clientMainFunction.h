@@ -19,9 +19,12 @@ private:
     void handleClient(int clientSocket);
 
     // Handles incoming commands from clients
-    void processCommands();
+    void processCommand(const std::string &commandJson, int clientSocket);
 
-    // Establish a connection with the command client
+    void processClient(int clientSocket);
+
+
+        // Establish a connection with the command client
     bool connectToClient(Server &server);
 
 public:

@@ -1,5 +1,6 @@
 #include "handleClient/clientMainFunction.h"
 #include "handleLocalCommand/localCommandMainFunction.h"
+#include "handleHeartbeat/heartbeatMainFunction.h"
 #include "util/TcpConnectionUtility.h"
 #include "util/KVMap.h"
 #include "util/JsonParser.h"
@@ -10,7 +11,6 @@
 #include <string>
 #include <cstdlib>
 #include <cstdio>
-
 
 // Get used ports via lsof
 std::set<int> getUsedPorts() {
