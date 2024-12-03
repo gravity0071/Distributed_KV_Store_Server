@@ -29,8 +29,8 @@ int main(int argc, char* argv[]) {
     }
 
     // Parse command-line arguments
-    int clientPort = std::stoi(argv[1]);
-    int commandPort = std::stoi(argv[2]);
+    int clientPort = std::stoi(argv[2]);
+//    int commandPort = std::stoi(argv[2]);
     std::string storeId = argv[3];
 
 //    std::cout << "Starting server with ports:\n"
@@ -46,15 +46,15 @@ int main(int argc, char* argv[]) {
     try {
         // Create thread objects
         ClientThread clientThread(kvmap, clientPort, isMigrating, isRunning, jsonParser);
-        CommandThread commandThread(kvmap, commandPort, isMigrating, isRunning, jsonParser);
+//        CommandThread commandThread(kvmap, commandPort, isMigrating, isRunning, jsonParser);
 
         // Launch threads
         std::thread client(&ClientThread::run, &clientThread);
-        std::thread command(&CommandThread::run, &commandThread);
+//        std::thread command(&CommandThread::run, &commandThread);
 
         // Wait for threads to complete
         client.join();
-        command.join();
+//        command.join();
     } catch (const std::exception& e) {
         std::cerr << "Error occurred: " << e.what() << "\n";
         isRunning = false;

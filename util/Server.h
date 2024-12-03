@@ -1,42 +1,36 @@
-//
-// Created by Shawn Wan on 2024/11/5.
-//
-#ifndef SERVER_H
-#define SERVER_H
+#pragma once
 
-#include <iostream>
-#include <string>
-#include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/socket.h>
 #include <unistd.h>
+#include <iostream>
 
-// The Server class provides a basic TCP server implementation
-// that can initialize, accept connections, and manage client connections.
 class Server {
 public:
+    // 构造函数
     Server(int port);
+
+    // 析构函数
     ~Server();
 
+    // 初始化服务器
     bool initialize();
 
+    // 接受新连接
     int acceptConnection();
 
+    // 关闭与客户端的连接
     void closeConnection(int client_socket);
 
+    // 关闭服务器
     void closeServer();
 
-    // Add this method to get the server's socket file descriptor
+    // 获取服务器套接字（添加的 getSocket 方法）
     int getSocket() const;
 
 private:
-    int port_;                 // Port number the server listens on.
-    int server_fd_;            // Server socket file descriptor.
-    struct sockaddr_in address_; // Structure holding server address information.
-    int addrlen_;              // Length of the server address structure.
-
-    // Configures the server socket with necessary options.
-    // Returns true on success, false on failure.
-    bool configureSocket();
+    int port_;                   // 端口号
+    int server_fd_;              // 服务器文件描述符
+    struct sockaddr_in address_; // 服务器地址
+    int addrlen_;                // 地址长度
 };
-
-#endif // SERVER_H

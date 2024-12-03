@@ -15,6 +15,8 @@ bool Server::initialize() {
         perror("Socket creation failed");
         return false;
     }
+//    std::cout << "Server is listening on port " << port_ << std::endl;
+
 
     int opt = 1;
     if (setsockopt(server_fd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
@@ -39,7 +41,7 @@ bool Server::initialize() {
         return false;
     }
 
-//    std::cout << "Server is listening on port " << port_ << std::endl;
+    // std::cout << "Server is listening on port " << port_ << std::endl;
     return true;
 }
 
@@ -66,7 +68,7 @@ void Server::closeServer() {
     }
 }
 
-// Add getSocket method
+// 添加 getSocket 方法
 int Server::getSocket() const {
     return server_fd_;
 }
