@@ -7,13 +7,6 @@
 #include <unistd.h>
 #include <openssl/md5.h>
 
-void CommandThread::SetUpTest() {
-//    kvMap.put("apple", "fruit");
-//    kvMap.put("carrot", "vegetable");
-//    kvMap.put("banana", "fruit");
-//    kvMap.put("dog", "animal");
-}
-
 CommandThread::CommandThread(KVMap &kvMap, int port, int clientPort, bool &isMigrating, std::atomic<bool> &isRunning,
                              std::string storeId,
                              JsonParser &jsonParser)
@@ -33,7 +26,6 @@ CommandThread::~CommandThread() {
 }
 
 int CommandThread::distinguishSendorRec(int clientSocket) {
-    SetUpTest();
     isMigrating = true;
 
     std::string buffer = "";
