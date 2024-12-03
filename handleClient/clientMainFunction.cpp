@@ -9,10 +9,10 @@
 
 ClientThread::ClientThread(KVMap& kvMap, int port, bool& isMigrating, std::atomic<bool>& isRunning, JsonParser& jsonParser)
         : kvMap(kvMap), port(port), isMigrating(isMigrating), isRunning(isRunning), jsonParser(jsonParser), commandSocket(-1) {
-    kvMap.put("1000", "A");
-    kvMap.put("2000", "B");
-    kvMap.put("3000", "C");
-    kvMap.put("4000", "100");
+//    kvMap.put("1000", "A");
+//    kvMap.put("2000", "B");
+//    kvMap.put("3000", "C");
+//    kvMap.put("4000", "100");
 }
 
 // Destructor
