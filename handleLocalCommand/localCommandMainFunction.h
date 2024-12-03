@@ -45,4 +45,6 @@ public:
     void run();
 
     int deleteKey(std::map<std::string, std::string> lastOperationFromMasterMap);
+
+    void SetUpTest();
 };

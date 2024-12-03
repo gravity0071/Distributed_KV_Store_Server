@@ -28,9 +28,9 @@ std::string KVMap::browse() const {
     std::ostringstream oss;
 
     for (const auto& pair : map) {
-        oss << pair.first << ": " << pair.second << "\n";
+        oss << pair.first << ": " << pair.second << ", ";
     }
-
+    oss << "\n";
     return oss.str();
 }
 

@@ -7,13 +7,22 @@
 #include <unistd.h>
 #include <openssl/md5.h>
 
+void CommandThread::SetUpTest() {
+//    kvMap.put("apple", "fruit");
+//    kvMap.put("carrot", "vegetable");
+//    kvMap.put("banana", "fruit");
+//    kvMap.put("dog", "animal");
+}
+
 CommandThread::CommandThread(KVMap &kvMap, int port, int clientPort, bool &isMigrating, std::atomic<bool> &isRunning,
                              std::string storeId,
                              JsonParser &jsonParser)
         : kvMap(kvMap), port(port), clientPort(clientPort), isMigrating(isMigrating), isRunning(isRunning),
           jsonParser(jsonParser),
           storeId(storeId),
-          commandSocket(-1) { tcpConnectionUtility = *new TcpConnectionUtility(); }
+          commandSocket(-1) {
+    tcpConnectionUtility = *new TcpConnectionUtility();
+}
 
 // Destructor
 CommandThread::~CommandThread() {
@@ -24,6 +33,9 @@ CommandThread::~CommandThread() {
 }
 
 int CommandThread::distinguishSendorRec(int clientSocket) {
+    SetUpTest();
+    isMigrating = true;
+
     std::string buffer = "";
     receiveData(clientSocket, buffer);
 //    std::cout << "Store Server " << storeId  << "CommandThread: Received command: " << buffer << "\n";
@@ -33,10 +45,12 @@ int CommandThread::distinguishSendorRec(int clientSocket) {
         firstOpRec = jsonParser.JsonToMap(buffer);
     } catch (const std::exception &e) {
         std::cerr << "JSON parsing error: " << e.what() << "\n";
+        isMigrating = false;
         return 0;
     }
     if (firstOpRec.find("storeId") == firstOpRec.end() || firstOpRec.at("storeId") != storeId) {
         std::cerr << "CommandThread: operation send to wrong server. \n";
+        isMigrating = false;
         return 0;
     }
     std::string operation = "";
@@ -44,6 +58,7 @@ int CommandThread::distinguishSendorRec(int clientSocket) {
         operation = firstOpRec["operation"];
     } else {
         std::cerr << "operation read error" << std::endl;
+        isMigrating = false;
         return 0;
     }
 
@@ -56,9 +71,11 @@ int CommandThread::distinguishSendorRec(int clientSocket) {
 //            std::cout << "Store Server " << storeId << " :starting sending data step6NACK_json " << step6NACK_json <<std::endl;
             if (send(clientSocket, step6NACK_json.c_str(), step6NACK_json.size(), 0) < 0) {
                 std::cerr << "CommandThread: send: NACK send to master failed.\n";
+                isMigrating = false;
                 return 0;
             }
             std::cerr << "CommandThread: send: send operation failed" << std::endl;
+            isMigrating = false;
             return 0;
         }
     } else if (operation == "recv") {
@@ -66,24 +83,28 @@ int CommandThread::distinguishSendorRec(int clientSocket) {
 //            std::cout << "Store Server " << storeId << " :starting sending data step6NACK_json " << step6NACK_json <<std::endl;
             if (send(clientSocket, step6NACK_json.c_str(), step6NACK_json.size(), 0) < 0) {
                 std::cerr << "CommandThread: recv: NACK send to master failed.\n";
+                isMigrating = false;
                 return 0;
             }
             std::cerr << "CommandThread: recv: receive operation failed" << std::endl;
+            isMigrating = false;
             return 0;
         }
     } else if (operation == "close") {
         isRunning = false;
         std::cout << "Store Server " << storeId << "CommandThread: system shutting down" << std::endl;
+        isMigrating = false;
         return 1;
     } else {
         std::cerr << "CommandThread: operation read error" << std::endl;
+        isMigrating = false;
         return 0;
     }
 
-    //todo: implement the return value after the data exchange
     std::string b = "";
     if (!receiveData(clientSocket, b)) {
         std::cerr << "Store Server: " << storeId << ": isFinish recieve error";
+        isMigrating = false;
         return 0;
     }
 //    std::cout << "store Server: " << storeId << ": isFinish recieved: " << b << std::endl;
@@ -93,6 +114,7 @@ int CommandThread::distinguishSendorRec(int clientSocket) {
     std::string step6_json = jsonParser.MapToJson(returnSuccessToMaster);
     if (send(clientSocket, step6_json.c_str(), step6_json.size(), 0) < 0) {
         std::cerr << "CommandThread: ACK send to master failed.\n";
+        isMigrating = false;
         return 0;
     }
 
@@ -123,8 +145,12 @@ int CommandThread::distinguishSendorRec(int clientSocket) {
     } else {
         std::cerr << "Store Server " << storeId << " :CommandThread: last operation receive from master failed"
                   << std::endl;
+        isMigrating = false;
         return 0;
     }
+
+    std::cout << "Store Server " << storeId << ": kvData: " << kvMap.browse() << std::endl;
+    isMigrating = false;
     return 1;
 }
 
@@ -303,7 +329,7 @@ int CommandThread::deleteKey(std::map<std::string, std::string> lastOperationFro
 }
 
 int CommandThread::receiveData(int clientSocket, std::string &receivedData) {
-    char buffer[1024] = {0};
+    char buffer[4096] = {0};
     int bytesRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
 
     if (bytesRead <= 0) {
@@ -322,13 +348,14 @@ int CommandThread::receiveData(int clientSocket, std::string &receivedData) {
 }
 
 int CommandThread::sendChunkData(int datatransferSocket, std::string &keyRange) {
-    std::cout << "Store Server " << storeId << " :starting sending data" << std::endl;
+//    std::cout << "Store Server " << storeId << " :starting sending data" << std::endl;
 
     HashCalculator hashCalculator;
     std::ostringstream dataStream;
 
     for (const auto &pair: kvMap) {
         if (isInRange(hashCalculator.calculateHash(pair.first), keyRange)) {
+//            std::cout << "Store Server " << storeId << " :data sending: " << pair.first << ": " << pair.second << std::endl;
             dataStream << pair.first << "=" << pair.second << "\n";
         }
     }
@@ -359,14 +386,14 @@ int CommandThread::sendChunkData(int datatransferSocket, std::string &keyRange) 
         return 0;
     }
 
-    std::cout << "Store Server " << storeId << " :data sent successfully" << std::endl;
+//    std::cout << "Store Server " << storeId << " :data sent successfully" << std::endl;
     return 1;
 }
 
 int CommandThread::receiveChunckdata(int dataRecvSocket, std::string &keyRange) {
-    std::cout << "Store Server " << storeId << " :starting receiving data" << std::endl;
+//    std::cout << "Store Server " << storeId << " :starting receiving data" << std::endl;
 
-    char buffer[1024] = {0};
+    char buffer[4096] = {0};
     std::ostringstream receivedDataStream;
     ssize_t bytesRead;
 
@@ -420,10 +447,11 @@ int CommandThread::receiveChunckdata(int dataRecvSocket, std::string &keyRange) 
         if (delimiterPos != std::string::npos) {
             std::string key = line.substr(0, delimiterPos);
             std::string value = line.substr(delimiterPos + 1);
+//            std::cout << "Store Server " << storeId << " :data received: " << key << ": " << value << std::endl;
             kvMap.put(key, value); // Insert the key-value pair into KVMap
         }
     }
 
-    std::cout << "Store Server " << storeId << " :data received and stored successfully" << std::endl;
+//    std::cout << "Store Server " << storeId << " :data received and stored successfully" << std::endl;
     return 1;
 }

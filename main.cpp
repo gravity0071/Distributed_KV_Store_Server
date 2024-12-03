@@ -33,7 +33,7 @@ std::set<int> getUsedPorts() {
                     int port = std::stoi(line.substr(colonPos + 1, spacePos - colonPos - 1));
                     usedPorts.insert(port);
                 } catch (const std::exception& e) {
-                    std::cerr << "Error parsing port: " << e.what() << std::endl;
+//                    std::cerr << "Error parsing port: " << e.what() << std::endl;
                 }
             }
         }
