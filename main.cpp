@@ -1,5 +1,4 @@
 #include "handleClient/clientMainFunction.h"
-#include "handleHeartbeat/heartbeatMainFunction.h"
 #include "handleLocalCommand/localCommandMainFunction.h"
 #include "util/TcpConnectionUtility.h"
 #include "util/KVMap.h"
@@ -110,9 +109,6 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    // Parse command-line arguments
-
-    // Output parsed ports
 //    std::cout << "Starting server with ports:\n"
 //              << "Client Port: " << clientPort << "\n"
 //              << "Command Port: " << commandPort << "\n"

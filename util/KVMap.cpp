@@ -1,32 +1,65 @@
-//
-// Created by Shawn Wan on 2024/11/14.
-//
-
 #include "KVMap.h"
 #include <sstream>
+#include <iostream>
 
-// Insert or update a key-value pair
 void KVMap::put(const std::string& key, const std::string& value) {
-    std::unique_lock<std::shared_mutex> lock(mutex); // Exclusive lock for writing
+    std::unique_lock<std::shared_mutex> lock(mutex); 
     map[key] = value;
+//    std::cout << "KVMap: Put key=" << key << ", value=" << value << std::endl;
 }
 
-// Retrieve a value by key
+void KVMap::write(const std::string& key, const std::string& value) {
+    std::unique_lock<std::shared_mutex> lock(mutex); 
+    map[key] = value;
+    std::cout << "KVMap: Write key=" << key << ", value=" << value << std::endl;
+}
+
 bool KVMap::get(const std::string& key, std::string& value) const {
-    std::shared_lock<std::shared_mutex> lock(mutex); // Shared lock for reading
+    std::shared_lock<std::shared_mutex> lock(mutex); 
     auto it = map.find(key);
     if (it != map.end()) {
         value = it->second;
+        std::cout << "KVMap: Found key=" << key << ", value=" << value << std::endl;
         return true;
     }
+    std::cout << "KVMap: Key=" << key << " not found.\n";
     return false;
 }
 
-// Browse and return all key-value pairs as a string
-std::string KVMap::browse() const {
-    std::shared_lock<std::shared_mutex> lock(mutex); // Shared lock for reading
-    std::ostringstream oss;
+bool KVMap::remove(const std::string& key) {
+    std::unique_lock<std::shared_mutex> lock(mutex);
+    auto it = map.find(key);
+    if (it != map.end()) {
+        map.erase(it);
+        std::cout << "KVMap: Removed key=" << key << std::endl;
+        return true;
+    }
+    std::cout << "KVMap: Key=" << key << " not found. Remove operation failed.\n";
+    return false;
+}
 
+bool KVMap::increment(const std::string& key) {
+    std::unique_lock<std::shared_mutex> lock(mutex); 
+    auto it = map.find(key);
+    if (it != map.end()) {
+        try {
+            int currentValue = std::stoi(it->second);
+            ++currentValue;
+            it->second = std::to_string(currentValue);
+//            std::cout << "KVMap: Incremented key=" << key << ", new value=" << currentValue << std::endl;
+            return true;
+        } catch (const std::exception& e) {
+//            std::cout << "KVMap: Increment failed for key=" << key << ". Value is not an integer.\n";
+            return false;
+        }
+    }
+    std::cout << "KVMap: Key=" << key << " not found. Increment operation failed.\n";
+    return false;
+}
+
+std::string KVMap::browse() const {
+    std::shared_lock<std::shared_mutex> lock(mutex); 
+    std::ostringstream oss;
     for (const auto& pair : map) {
         oss << pair.first << ": " << pair.second << ", ";
     }
