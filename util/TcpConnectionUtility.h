@@ -10,6 +10,9 @@ class TcpConnectionUtility {
 public:
     // Create and establish a TCP connection to the specified IP and port, with an optional local port
     static int connectToServer(const std::string& serverIp, int serverPort, int localPort = 0);
+
+    static std::pair<std::string, int> getLocalAddress(int socketFd);
+    static std::pair<std::string, int> getRemoteAddress(int socketFd);
 };
 
 #endif //DISTRIBUTED_KV_STORE_MASTER_TCPCONNECTIONUTILITY_H

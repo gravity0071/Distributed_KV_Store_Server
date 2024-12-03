@@ -1,23 +1,21 @@
 #include "KVMap.h"
 #include <sstream>
-#include <iostream> // 必须包含以使用 std::cout
+#include <iostream>
 
-// 插入或更新键值对
 void KVMap::put(const std::string& key, const std::string& value) {
-    std::unique_lock<std::shared_mutex> lock(mutex); // 独占锁用于写入
+    std::unique_lock<std::shared_mutex> lock(mutex); 
     map[key] = value;
 //    std::cout << "KVMap: Put key=" << key << ", value=" << value << std::endl;
 }
 
 void KVMap::write(const std::string& key, const std::string& value) {
-    std::unique_lock<std::shared_mutex> lock(mutex); // 独占锁用于写入
+    std::unique_lock<std::shared_mutex> lock(mutex); 
     map[key] = value;
     std::cout << "KVMap: Write key=" << key << ", value=" << value << std::endl;
 }
 
-// 根据键获取值
 bool KVMap::get(const std::string& key, std::string& value) const {
-    std::shared_lock<std::shared_mutex> lock(mutex); // 共享锁用于读取
+    std::shared_lock<std::shared_mutex> lock(mutex); 
     auto it = map.find(key);
     if (it != map.end()) {
         value = it->second;
@@ -28,9 +26,8 @@ bool KVMap::get(const std::string& key, std::string& value) const {
     return false;
 }
 
-// 删除键值对
 bool KVMap::remove(const std::string& key) {
-    std::unique_lock<std::shared_mutex> lock(mutex); // 独占锁用于写入
+    std::unique_lock<std::shared_mutex> lock(mutex);
     auto it = map.find(key);
     if (it != map.end()) {
         map.erase(it);
@@ -41,9 +38,8 @@ bool KVMap::remove(const std::string& key) {
     return false;
 }
 
-// 增加键对应的值（假设值为整数）
 bool KVMap::increment(const std::string& key) {
-    std::unique_lock<std::shared_mutex> lock(mutex); // 独占锁用于写入
+    std::unique_lock<std::shared_mutex> lock(mutex); 
     auto it = map.find(key);
     if (it != map.end()) {
         try {
@@ -61,12 +57,27 @@ bool KVMap::increment(const std::string& key) {
     return false;
 }
 
-// 遍历所有键值对
 std::string KVMap::browse() const {
-    std::shared_lock<std::shared_mutex> lock(mutex); // 共享锁用于读取
+    std::shared_lock<std::shared_mutex> lock(mutex); 
     std::ostringstream oss;
     for (const auto& pair : map) {
-        oss << pair.first << ": " << pair.second << "\n";
+        oss << pair.first << ": " << pair.second << ", ";
     }
+    oss << "\n";
     return oss.str();
+}
+
+bool KVMap::deleteKey(const std::string& key) {
+    std::unique_lock<std::shared_mutex> lock(mutex);
+    return map.erase(key) > 0;
+}
+
+bool KVMap::contains(const std::string &key) const {
+    std::shared_lock lock(mutex);
+    return map.find(key) != map.end();
+}
+
+void KVMap::clear() {
+    std::unique_lock lock(mutex);
+    map.clear();
 }
