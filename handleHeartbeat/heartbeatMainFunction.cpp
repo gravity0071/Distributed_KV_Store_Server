@@ -41,7 +41,7 @@ void HeartbeatThread::sendHeartbeat() {
 // Function to establish a connection to the master
 bool HeartbeatThread::connectToMaster() {
     //todo: test need to delete later
-    std::this_thread::sleep_for(std::chrono::seconds(5)); // Heartbeat interval
+    std::this_thread::sleep_for(std::chrono::seconds(15)); // Heartbeat interval
 
     masterSocket = tcpConnectionUtility.connectToServer(masterIp, masterPort);
     if (masterSocket == -1) {
@@ -55,21 +55,21 @@ bool HeartbeatThread::connectToMaster() {
 
 // Run the thread
 void HeartbeatThread::run() {
-    if (!connectToMaster()) {
-        std::cerr << "Initial connection to master failed. Exiting heartbeat thread.\n";
-        return;
-    }
+//    if (!connectToMaster()) {
+//        std::cerr << "Initial connection to master failed. Exiting heartbeat thread.\n";
+//        return;
+//    }
 
     while (isRunning) {
-        std::this_thread::sleep_for(std::chrono::seconds(5)); // Heartbeat interval
-        sendHeartbeat();
+//        std::this_thread::sleep_for(std::chrono::seconds(5)); // Heartbeat interval
+//        sendHeartbeat();
     }
 
     // Close the connection when shutting down
-    if (masterSocket != -1) {
-        close(masterSocket);
-        masterSocket = -1;
-    }
+//    if (masterSocket != -1) {
+//        close(masterSocket);
+//        masterSocket = -1;
+//    }
 
-    std::cout << "Heartbeat thread stopped.\n";
+//    std::cout << "Heartbeat thread stopped.\n";
 }
