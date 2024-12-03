@@ -27,7 +27,7 @@ bool CommandThread::connectToClient(Server &server) {
         return false;
     }
 
-    std::cout << "CommandThread: Accepted connection on port " << port << "\n";
+//    std::cout << "CommandThread: Accepted connection on port " << port << "\n";
     return true;
 }
 
@@ -50,7 +50,7 @@ void CommandThread::processCommands() {
         }
 
         buffer[bytesRead] = '\0'; // Null-terminate the received data
-        std::cout << "CommandThread: Received command: " << buffer << "\n";
+//        std::cout << "CommandThread: Received command: " << buffer << "\n";
 
         // Parse the command
         auto command = jsonParser.JsonToMap(buffer);
@@ -79,7 +79,7 @@ void CommandThread::processCommands() {
             // Handle write operation
             if (command.find("value") != command.end()) {
                 std::string value = command["value"];
-                kvMap.put(key, value);
+                kvMap.write(key, value);
                 std::string successResponse = jsonParser.MapToJson({{"message", "Write operation succeeded."}});
                 send(commandSocket, successResponse.c_str(), successResponse.size(), 0);
             } else {
@@ -95,17 +95,17 @@ void CommandThread::processCommands() {
                 std::string errorResponse = jsonParser.MapToJson({{"error", "Key not found. Delete operation failed."}});
                 send(commandSocket, errorResponse.c_str(), errorResponse.size(), 0);
             }
-        } else if (operation == "increment") {
-            // Handle increment operation
-            if (kvMap.increment(key)) {
-                std::string newValue;
-                kvMap.get(key, newValue);
-                std::string successResponse = jsonParser.MapToJson({{"key", key}, {"value", newValue}});
-                send(commandSocket, successResponse.c_str(), successResponse.size(), 0);
-            } else {
-                std::string errorResponse = jsonParser.MapToJson({{"error", "Increment operation failed. Key not found or value is not an integer."}});
-                send(commandSocket, errorResponse.c_str(), errorResponse.size(), 0);
-            }
+//        } else if (operation == "increment") {
+//            // Handle increment operation
+//            if (kvMap.increment(key)) {
+//                std::string newValue;
+//                kvMap.get(key, newValue);
+//                std::string successResponse = jsonParser.MapToJson({{"key", key}, {"value", newValue}});
+//                send(commandSocket, successResponse.c_str(), successResponse.size(), 0);
+//            } else {
+//                std::string errorResponse = jsonParser.MapToJson({{"error", "Increment operation failed. Key not found or value is not an integer."}});
+//                send(commandSocket, errorResponse.c_str(), errorResponse.size(), 0);
+//            }
         } else if (operation == "close") {
             // Handle close operation
             std::cout << "CommandThread: Shutting down...\n";

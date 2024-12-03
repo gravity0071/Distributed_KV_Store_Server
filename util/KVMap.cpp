@@ -6,7 +6,13 @@
 void KVMap::put(const std::string& key, const std::string& value) {
     std::unique_lock<std::shared_mutex> lock(mutex); // 独占锁用于写入
     map[key] = value;
-    std::cout << "KVMap: Put key=" << key << ", value=" << value << std::endl;
+//    std::cout << "KVMap: Put key=" << key << ", value=" << value << std::endl;
+}
+
+void KVMap::write(const std::string& key, const std::string& value) {
+    std::unique_lock<std::shared_mutex> lock(mutex); // 独占锁用于写入
+    map[key] = value;
+    std::cout << "KVMap: Write key=" << key << ", value=" << value << std::endl;
 }
 
 // 根据键获取值
@@ -44,10 +50,10 @@ bool KVMap::increment(const std::string& key) {
             int currentValue = std::stoi(it->second);
             ++currentValue;
             it->second = std::to_string(currentValue);
-            std::cout << "KVMap: Incremented key=" << key << ", new value=" << currentValue << std::endl;
+//            std::cout << "KVMap: Incremented key=" << key << ", new value=" << currentValue << std::endl;
             return true;
         } catch (const std::exception& e) {
-            std::cout << "KVMap: Increment failed for key=" << key << ". Value is not an integer.\n";
+//            std::cout << "KVMap: Increment failed for key=" << key << ". Value is not an integer.\n";
             return false;
         }
     }

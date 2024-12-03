@@ -48,11 +48,17 @@ void ClientThread::handleClient(int clientSocket) {
     std::string key = clientRequest["key"];
     std::string operation = clientRequest["operation"];
 
+    // Restrict write and delete operations during migration
+    if (isMigrating && (operation == "write" || operation == "delete")) {
+        std::string errorMessage = jsonParser.MapToJson({{"error", "Server is migrating; only 'read' operations are allowed."}});
+        send(clientSocket, errorMessage.c_str(), errorMessage.size(), 0);
+        close(clientSocket);
+        return;
+    }
+
+    // Handle operations
     if (operation == "write") {
-        if (isMigrating) {
-            std::string errorMessage = jsonParser.MapToJson({{"error", "Server is migrating; writes are temporarily blocked."}});
-            send(clientSocket, errorMessage.c_str(), errorMessage.size(), 0);
-        } else if (clientRequest.find("value") != clientRequest.end()) {
+        if (clientRequest.find("value") != clientRequest.end()) {
             std::string value = clientRequest["value"];
             kvMap.put(key, value);
             std::string successMessage = jsonParser.MapToJson({{"message", "Write operation succeeded."}});
@@ -78,31 +84,15 @@ void ClientThread::handleClient(int clientSocket) {
             std::string errorMessage = jsonParser.MapToJson({{"error", "Key not found. Delete operation failed."}});
             send(clientSocket, errorMessage.c_str(), errorMessage.size(), 0);
         }
-    } else if (operation == "increment") {
-        std::string value;
-        if (kvMap.get(key, value)) {
-            try {
-                int intValue = std::stoi(value);
-                intValue++;
-                kvMap.put(key, std::to_string(intValue));
-                std::string successMessage = jsonParser.MapToJson({{"key", key}, {"value", std::to_string(intValue)}});
-                send(clientSocket, successMessage.c_str(), successMessage.size(), 0);
-            } catch (const std::exception& e) {
-                std::string errorMessage = jsonParser.MapToJson({{"error", "Value is not an integer. Increment operation failed."}});
-                send(clientSocket, errorMessage.c_str(), errorMessage.size(), 0);
-            }
-        } else {
-            std::string errorMessage = jsonParser.MapToJson({{"error", "Key not found. Increment operation failed."}});
-            send(clientSocket, errorMessage.c_str(), errorMessage.size(), 0);
-        }
     } else {
-        std::string errorMessage = jsonParser.MapToJson({{"error", "Invalid operation. Supported operations: 'read', 'write', 'delete', 'increment'."}});
+        std::string errorMessage = jsonParser.MapToJson({{"error", "Invalid operation. Supported operations: 'read', 'write', 'delete'."}});
         send(clientSocket, errorMessage.c_str(), errorMessage.size(), 0);
     }
 
     close(clientSocket);
     std::cout << "Closed connection with client.\n";
 }
+
 
 // Run the thread
 void ClientThread::run() {

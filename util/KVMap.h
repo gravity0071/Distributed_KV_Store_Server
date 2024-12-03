@@ -16,6 +16,7 @@ public:
      * @param value 值
      */
     void put(const std::string& key, const std::string& value);
+    void write(const std::string& key, const std::string& value);
 
     /**
      * 根据键获取值

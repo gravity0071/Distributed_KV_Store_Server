@@ -33,10 +33,10 @@ int main(int argc, char* argv[]) {
     int commandPort = std::stoi(argv[2]);
     std::string storeId = argv[3];
 
-    std::cout << "Starting server with ports:\n"
-              << "Client Port: " << clientPort << "\n"
-              << "Command Port: " << commandPort << "\n"
-              << "Store ID: " << storeId << "\n";
+//    std::cout << "Starting server with ports:\n"
+//              << "Client Port: " << clientPort << "\n"
+//              << "Command Port: " << commandPort << "\n"
+//              << "Store ID: " << storeId << "\n";
 
     // Initialize components
     KVMap kvmap;
