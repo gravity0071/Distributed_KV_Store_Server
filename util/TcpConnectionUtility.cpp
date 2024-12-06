@@ -1,8 +1,10 @@
 #include "TcpConnectionUtility.h"
 #include <iostream>
 #include <cstring>
-#include <arpa/inet.h> // For socket functions
-#include <unistd.h>    // For close()
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 
 int TcpConnectionUtility::connectToServer(const std::string& serverIp, int serverPort, int localPort) {
     // Create a new socket
@@ -25,7 +27,7 @@ int TcpConnectionUtility::connectToServer(const std::string& serverIp, int serve
             return -1;
         }
 
-        std::cout << "Bound to local port " << localPort << std::endl;
+//        std::cout << "Bound to local port " << localPort << std::endl;
     }
 
     // Set up the remote server address
@@ -47,6 +49,38 @@ int TcpConnectionUtility::connectToServer(const std::string& serverIp, int serve
         return -1;
     }
 
-    std::cout << "Connected to server at " << serverIp << ":" << serverPort << std::endl;
+//    std::cout << "Connected to server at " << serverIp << ":" << serverPort << std::endl;
     return socketFd;
+}
+
+std::pair<std::string, int> TcpConnectionUtility::getLocalAddress(int socketFd) {
+    sockaddr_in localAddress{};
+    socklen_t addressLength = sizeof(localAddress);
+
+    if (getsockname(socketFd, (struct sockaddr*)&localAddress, &addressLength) < 0) {
+        perror("Failed to get local address");
+        return {"", -1};
+    }
+
+    char ipBuffer[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &localAddress.sin_addr, ipBuffer, sizeof(ipBuffer));
+
+    int port = ntohs(localAddress.sin_port);
+    return {std::string(ipBuffer), port};
+}
+
+std::pair<std::string, int> TcpConnectionUtility::getRemoteAddress(int socketFd) {
+    sockaddr_in remoteAddress{};
+    socklen_t addressLength = sizeof(remoteAddress);
+
+    if (getpeername(socketFd, (struct sockaddr*)&remoteAddress, &addressLength) < 0) {
+        perror("Failed to get remote address");
+        return {"", -1};
+    }
+
+    char ipBuffer[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &remoteAddress.sin_addr, ipBuffer, sizeof(ipBuffer));
+
+    int port = ntohs(remoteAddress.sin_port);
+    return {std::string(ipBuffer), port};
 }

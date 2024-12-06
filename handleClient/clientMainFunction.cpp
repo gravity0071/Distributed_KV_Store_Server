@@ -1,6 +1,3 @@
-// ClientThread.cpp
-// Created by Shawn Wan on 2024/11/14
-
 #include "clientMainFunction.h"
 #include <iostream>
 #include <thread>
@@ -10,73 +7,76 @@
 #include <cstring>
 #include <unistd.h> // For close()
 
-// Constructor
 ClientThread::ClientThread(KVMap& kvMap, int port, bool& isMigrating, std::atomic<bool>& isRunning, JsonParser& jsonParser)
-        : kvMap(kvMap), port(port), isMigrating(isMigrating), isRunning(isRunning), jsonParser(jsonParser) {}
+        : kvMap(kvMap), port(port), isMigrating(isMigrating), isRunning(isRunning), jsonParser(jsonParser), commandSocket(-1) {
+//    kvMap.put("1000", "A");
+//    kvMap.put("2000", "B");
+//    kvMap.put("3000", "C");
+//    kvMap.put("4000", "100");
+}
 
-//todo: need to implement corresponding function
-void ClientThread::handleClient(int clientSocket) {
-    char buffer[1024] = {0};
-    int bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
+// Destructor
+ClientThread::~ClientThread() {
+    if (commandSocket != -1) {
+        close(commandSocket);
+        std::cout << "ClientThread: Command connection closed.\n";
+    }
+}
 
-    if (bytesRead <= 0) {
-        if (bytesRead == 0) {
-            std::cout << "Client disconnected gracefully.\n";
-        } else {
-            std::cerr << "Error reading from client.\n";
-        }
-        close(clientSocket);
+bool ClientThread::connectToClient(Server &server) {
+    commandSocket = server.acceptConnection();
+    if (commandSocket < 0) {
+        std::cerr << "ClientThread: Failed to accept command client connection.\n";
+        return false;
+    }
+    return true;
+}
+
+void ClientThread::processCommand(const std::string &commandJson, int clientSocket) {
+    auto command = jsonParser.JsonToMap(commandJson);
+
+    if (command.find("operation") == command.end() || command.find("key") == command.end()) {
+        std::string errorResponse = jsonParser.MapToJson({{"error", "Invalid command format. Missing 'operation' or 'key'."}});
+        send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
         return;
     }
 
-    std::cout << "Received from client: " << buffer << std::endl;
+    std::string operation = command["operation"];
+    std::string key = command["key"];
 
-    // Parse the client request
-    auto clientLookUpMap = jsonParser.JsonToMap(buffer);
-
-    // Check for required fields
-    std::string key = "NULL";
-    if (clientLookUpMap.find("operation") != clientLookUpMap.end() &&
-        clientLookUpMap.find("key") != clientLookUpMap.end()) {
-        key = clientLookUpMap["key"];
-        std::string operation = clientLookUpMap["operation"];
-
-        // Handle write operation
-        if (operation == "write") {
-            if (isMigrating) {
-                std::string errorMessage = "Server is migrating; writes are temporarily blocked.";
-                send(clientSocket, errorMessage.c_str(), errorMessage.size(), 0);
-            } else {
-                std::string value = clientLookUpMap["value"];
-                kvMap.put(key, value); // Write to KV store
-                std::string successMessage = "Write operation succeeded.";
-                send(clientSocket, successMessage.c_str(), successMessage.size(), 0);
-            }
-        }
-            // Handle read operation
-        else if (operation == "read") {
-            std::string value;
-            if (kvMap.get(key, value)) {
-                send(clientSocket, value.c_str(), value.size(), 0);
-            } else {
-                std::string errorMessage = "Key not found.";
-                send(clientSocket, errorMessage.c_str(), errorMessage.size(), 0);
-            }
+    if (operation == "read") {
+        std::string value;
+        if (kvMap.get(key, value)) {
+            std::string successResponse = jsonParser.MapToJson({{"key", key}, {"value", value}});
+            send(clientSocket, successResponse.c_str(), successResponse.size(), 0);
         } else {
-            std::string errorMessage = "Invalid operation.";
-            send(clientSocket, errorMessage.c_str(), errorMessage.size(), 0);
+            std::string errorResponse = jsonParser.MapToJson({{"error", "Key not found."}});
+            send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
+        }
+    } else if (operation == "write") {
+        if (command.find("value") != command.end()) {
+            std::string value = command["value"];
+            kvMap.write(key, value);
+            std::string successResponse = jsonParser.MapToJson({{"message", "Write operation succeeded."}});
+            send(clientSocket, successResponse.c_str(), successResponse.size(), 0);
+        } else {
+            std::string errorResponse = jsonParser.MapToJson({{"error", "Write operation failed. Missing 'value'."}});
+            send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
+        }
+    } else if (operation == "delete") {
+        if (kvMap.remove(key)) {
+            std::string successResponse = jsonParser.MapToJson({{"message", "Delete operation succeeded."}});
+            send(clientSocket, successResponse.c_str(), successResponse.size(), 0);
+        } else {
+            std::string errorResponse = jsonParser.MapToJson({{"error", "Key not found. Delete operation failed."}});
+            send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
         }
     } else {
-        std::cerr << "Invalid request: Missing 'operation' or 'key'.\n";
-        std::string errorMessage = "Invalid request: Missing 'operation' or 'key'.";
-        send(clientSocket, errorMessage.c_str(), errorMessage.size(), 0);
+        std::string errorResponse = jsonParser.MapToJson({{"error", "Invalid operation. Supported: 'read', 'write', 'delete'."}});
+        send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
     }
-
-    close(clientSocket); // Close the client socket after communication
-    std::cout << "Closed connection with client\n";
 }
 
-// Run the thread
 void ClientThread::run() {
     Server server(port);
 
@@ -85,41 +85,59 @@ void ClientThread::run() {
         return;
     }
 
-    fd_set readfds;
+    std::vector<std::thread> client_threads;
+
     while (isRunning) {
-        FD_ZERO(&readfds);
-        FD_SET(server.getSocket(), &readfds);
+        int clientSocket = server.acceptConnection();
 
-        struct timeval timeout{};
-        timeout.tv_sec = 1;  // 1-second timeout
-        timeout.tv_usec = 0;
-
-        int activity = select(server.getSocket() + 1, &readfds, nullptr, nullptr, &timeout);
-
-        if (activity < 0 && errno != EINTR) {
-            perror("Select error");
-            break;
-        }
-
-        if (activity == 0) {
-            // Timeout, check isRunning
+        if (clientSocket < 0) {
+            std::cerr << "ClientThread: Failed to accept client connection.\n";
             continue;
         }
 
-        if (FD_ISSET(server.getSocket(), &readfds)) {
-            int clientSocket = server.acceptConnection();
-            if (clientSocket < 0) {
-                std::cerr << "Failed to accept client connection.\n";
-                continue;
-            }
+        // Spawn a new thread to handle the client
+        client_threads.emplace_back([this, clientSocket]() {
+            this->processClient(clientSocket);
+        });
+    }
 
-            std::cout << "Accepted new client connection.\n";
-
-            // Handle client connection
-            std::thread(&ClientThread::handleClient, this, clientSocket).detach();
+    // Join all client threads before shutting down
+    for (auto &t : client_threads) {
+        if (t.joinable()) {
+            t.join();
         }
     }
 
+    if (commandSocket != -1) {
+        close(commandSocket);
+    }
+
     server.closeServer();
-    std::cout << "ClientThread: Server stopped.\n";
+    std::cout << "ClientThread: Stopped.\n";
+}
+
+void ClientThread::processClient(int clientSocket) {
+    char buffer[1024]; // Buffer to hold received data
+
+    while (true) {
+        memset(buffer, 0, sizeof(buffer)); // Clear the buffer for each new message
+
+        int bytes_read = recv(clientSocket, buffer, sizeof(buffer) - 1, 0); // Leave space for null termination
+
+        if (bytes_read < 0) {
+            perror("Error reading from socket");
+            break;
+        } else if (bytes_read == 0) {
+            std::cout << "Client disconnected.\n";
+            break;
+        }
+
+        buffer[bytes_read] = '\0'; // Null-terminate the buffer to safely print as a string
+
+        // Process the command
+        processCommand(buffer, clientSocket);
+    }
+
+    close(clientSocket);
+    std::cout << "Stopped handling client.\n";
 }
