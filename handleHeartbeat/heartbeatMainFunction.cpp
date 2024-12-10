@@ -20,7 +20,6 @@ HeartbeatThread::~HeartbeatThread() {
 }
 
 // Function to send heartbeat messages to the master
-//todo: need to implement the heartbeat protocol
 void HeartbeatThread::sendHeartbeat() {
     std::map<std::string, std::string> heartbeatData;
     heartbeatData["operation"] = "heartbeat";
@@ -41,9 +40,6 @@ void HeartbeatThread::sendHeartbeat() {
 
 // Function to establish a connection to the master
 bool HeartbeatThread::connectToMaster() {
-    //todo: test need to delete later
-//    std::this_thread::sleep_for(std::chrono::seconds(5)); // Heartbeat interval
-
     masterSocket = tcpConnectionUtility.connectToServer(masterIp, masterPort);
     if (masterSocket == -1) {
         std::cerr << "Failed to connect to master at " << masterIp << ":" << masterPort << std::endl;
@@ -56,6 +52,7 @@ bool HeartbeatThread::connectToMaster() {
 
 // Run the thread
 void HeartbeatThread::run() {
+    std::this_thread::sleep_for(std::chrono::seconds(2)); // wait the master for the heartbeat thread finishing creating
     if (!connectToMaster()) {
         std::cerr << "Initial connection to master failed. Exiting heartbeat thread.\n";
         return;
