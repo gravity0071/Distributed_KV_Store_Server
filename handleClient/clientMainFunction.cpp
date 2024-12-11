@@ -53,7 +53,7 @@ void ClientThread::processCommand(const std::string &commandJson, int clientSock
             std::string errorResponse = jsonParser.MapToJson({{"error", "Key not found."}});
             send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
         }
-    } else if (operation == "write") {
+    } else if (operation == "write" && !isMigrating) {
         if (command.find("value") != command.end()) {
             std::string value = command["value"];
             kvMap.write(key, value);
@@ -63,7 +63,7 @@ void ClientThread::processCommand(const std::string &commandJson, int clientSock
             std::string errorResponse = jsonParser.MapToJson({{"error", "Write operation failed. Missing 'value'."}});
             send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
         }
-    } else if (operation == "delete") {
+    } else if (operation == "delete" && !isMigrating) {
         if (kvMap.remove(key)) {
             std::string successResponse = jsonParser.MapToJson({{"message", "Delete operation succeeded."}});
             send(clientSocket, successResponse.c_str(), successResponse.size(), 0);
@@ -72,7 +72,7 @@ void ClientThread::processCommand(const std::string &commandJson, int clientSock
             send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
         }
     } else {
-        std::string errorResponse = jsonParser.MapToJson({{"error", "Invalid operation. Supported: 'read', 'write', 'delete'."}});
+        std::string errorResponse = jsonParser.MapToJson({{"error", "Key not found."}});
         send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
     }
 }

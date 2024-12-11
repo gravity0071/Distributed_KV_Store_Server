@@ -33,8 +33,8 @@ void HeartbeatThread::sendHeartbeat() {
             std::cerr << "Reconnection to master failed. Retrying...\n";
         }
     } else {
-        std::cout << "Heartbeat sent to master.\n";
-        std::cout << isRunning << std::endl;
+//        std::cout << "Heartbeat sent to master.\n";
+//        std::cout << isRunning << std::endl;
     }
 }
 
@@ -52,7 +52,7 @@ bool HeartbeatThread::connectToMaster() {
 
 // Run the thread
 void HeartbeatThread::run() {
-    std::this_thread::sleep_for(std::chrono::seconds(2)); // wait the master for the heartbeat thread finishing creating
+    std::this_thread::sleep_for(std::chrono::seconds(1)); // wait the master for the heartbeat thread finishing creating
     if (!connectToMaster()) {
         std::cerr << "Initial connection to master failed. Exiting heartbeat thread.\n";
         return;
